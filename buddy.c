@@ -15,6 +15,7 @@ static void *p_start = NULL;
 static int total_pages = 0;
 static unsigned char status[MAX_PAGES];
 static FreeBlock *free_lists[MAX_RANK + 1];
+static int free_counts[MAX_RANK + 1];
 
 static void add_to_free_list(int rank, int idx) {
     void *ptr = (char *)p_start + ((size_t)idx * PAGE_SIZE);
@@ -25,6 +26,7 @@ static void add_to_free_list(int rank, int idx) {
         free_lists[rank]->prev = block;
     }
     free_lists[rank] = block;
+    free_counts[rank]++;
 }
 
 static void remove_from_free_list(int rank, int idx) {
@@ -40,6 +42,7 @@ static void remove_from_free_list(int rank, int idx) {
     }
     block->next = NULL;
     block->prev = NULL;
+    free_counts[rank]--;
 }
 
 int init_page(void *p, int pgcount) {
@@ -51,6 +54,7 @@ int init_page(void *p, int pgcount) {
     memset(status, 0, sizeof(status));
     for (int i = 0; i <= MAX_RANK; i++) {
         free_lists[i] = NULL;
+        free_counts[i] = 0;
     }
 
     int curr_idx = 0;
@@ -157,12 +161,5 @@ int query_ranks(void *p) {
 
 int query_page_counts(int rank) {
     if (rank < 1 || rank > MAX_RANK) return -EINVAL;
-
-    int count = 0;
-    FreeBlock *curr = free_lists[rank];
-    while (curr) {
-        count++;
-        curr = curr->next;
-    }
-    return count;
+    return free_counts[rank];
 }
